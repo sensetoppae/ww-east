@@ -215,7 +215,7 @@
     .card.compact .st { display: none; }
     .card.compact .bdg { display: inline-flex; }
     .panel-foot.has-map { grid-template-columns: 1fr 1fr 1fr; }
-    @media (max-width: 860px) { .panel-foot.has-map { grid-template-columns: 1fr 1fr; } .panel-foot.has-map #openMap, .panel-foot.has-map #openRaug { grid-column: 1 / -1; } }
+    @media (max-width: 860px) { .panel-foot.has-map { grid-template-columns: 1fr 1fr; } .panel-foot.has-map #openMap, .panel-foot.has-map #openRaug, .panel-foot.has-map #openTrue { grid-column: 1 / -1; } }
 
     /* ---------- Legend ---------- */
     .legend { position: fixed; z-index: 4; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 20px;
@@ -1121,6 +1121,7 @@
       </a>
       <a class="btn" id="openMap" href="https://script.google.com/macros/s/AKfycbx2a6HTC9zaD8gvZY9Y0xDsLq9_C5Itey08AuxE9LFHZHnAblTEQkI_-mhgqppkfzqc/exec?page=map" target="_blank" rel="noopener" hidden>🗺️ เปิด Map</a>
       <a class="btn" id="openRaug" href="https://script.google.com/macros/s/AKfycbxBAlgZXLcyko-DhbHWElB6U_DOEXQ-MyNOQDINnmNYWP6ajiZ26fLvKSBfVj1heboL/exec?p=Dashboard" target="_blank" rel="noopener" hidden>📊 RAUG Dash</a>
+      <a class="btn" id="openTrue" href="https://script.google.com/macros/s/AKfycbz5wUqdTCyA_K4YcVYDToHiDe6BckvaiEWffuN3jrh6Uzg1tKF7ZsnItgLajdSkN0A/exec" target="_blank" rel="noopener" hidden>📊 True Dash</a>
       <a class="btn primary" id="openDash">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="8" width="3" height="6" rx="1" fill="currentColor"/><rect x="6.5" y="4.5" width="3" height="9.5" rx="1" fill="currentColor"/><rect x="11" y="2" width="3" height="12" rx="1" fill="currentColor"/></svg>
         ดู Dashboard
@@ -3379,7 +3380,9 @@
       if (mapBtn) mapBtn.hidden = id !== "checkin";
       const raugBtn = $("openRaug");
       if (raugBtn) raugBtn.hidden = id !== "budget";
-      const extra = id === "checkin" || id === "budget";
+      const trueBtn = $("openTrue");
+      if (trueBtn) trueBtn.hidden = id !== "ofc";
+      const extra = id === "checkin" || id === "budget" || id === "ofc";
       const foot = document.querySelector(".panel-foot");
       foot.classList.toggle("has-map", extra);
       foot.style.gridTemplateColumns = extra ? "" : (d.sheet_url ? "" : "1fr");
