@@ -1113,11 +1113,19 @@
           cols: [{ k: "date", label: "วันที่", num: true, sortv: (r) => r.ymd }, { k: "name", label: "ผู้ปฏิบัติ" }, { k: "sites", label: "Site A — Site B" }, { k: "vender", label: "Vender" }, { k: "job", label: "Job" }] });
       },
       ofc(d) {
-        const rows = d.rows || [];
+        const rows = (d.rows || []).map((r) => Object.assign({ grp: "เลยกำหนด", ord: 0 }, r));
+        const due7 = (d.due7_rows || []).map((r) => Object.assign({ grp: "0–7 วัน", ord: 1 }, r));
+        const all = rows.concat(due7);
         kpis((d.metrics || []).map((m) => ({ label: m.label, value: m.value, tone: m.tone })).concat([{ label: "เฉลี่ยเลย", value: rows.length ? Math.round(rows.reduce((a, r) => a + (r.days_over || 0), 0) / rows.length) + " วัน" : "-" }]));
-        charts(card("เลยกำหนดตัดมากี่วัน", "จำนวนงาน", barChart(buckets(rows, "days_over"), { id: "o" })) + card("แยกตามจังหวัด", "", hbar(countBy(rows, "province").map((x) => ({ label: x.label, value: x.value })))));
-        table({ title: "งาน OFC ที่เลยกำหนดตัด", rows, filter: { k: "province", label: "จังหวัด" }, sort: "days_over", dir: -1,
-          cols: [{ k: "eas", label: "EAS" }, { k: "ugrl", label: "UGRL" }, { k: "project", label: "โครงการ" }, { k: "province", label: "จังหวัด" }, { k: "cut_date", label: "กำหนดตัด", num: true }, { k: "days_over", label: "เลย", num: true, render: (r) => daysChip(r.days_over) }, { k: "status", label: "สถานะ" }] });
+        charts(card("เลยกำหนดตัดมากี่วัน", "จำนวนงาน", barChart(buckets(rows, "days_over"), { id: "o" })) + card("แยกตามจังหวัด", "", hbar(countBy(all, "province").map((x) => ({ label: x.label, value: x.value })))));
+        table({ title: "งาน OFC ที่เลยกำหนดตัด และ 0–7 วัน", rows: all, filters: [{ k: "grp", label: "กลุ่ม" }, { k: "province", label: "จังหวัด" }], sort: "ord", dir: 1,
+          cols: [
+            { k: "grp", label: "กลุ่ม", render: (r) => `<span class="chip ${r.grp === "เลยกำหนด" ? "alert" : "watch"}">${esc(r.grp)}</span>`, sortv: (r) => r.ord },
+            { k: "eas", label: "EAS" }, { k: "ugrl", label: "UGRL" }, { k: "project", label: "โครงการ" }, { k: "province", label: "จังหวัด" },
+            { k: "cut_date", label: "กำหนดตัด", num: true },
+            { k: "days_over", label: "กำหนด", num: true, sortv: (r) => r.grp === "เลยกำหนด" ? (r.days_over || 0) : -(r.days_until || 0) - 1, render: (r) => r.grp === "เลยกำหนด" ? daysChip(r.days_over) : `<span class="chip watch">${r.days_until === 0 ? "วันนี้" : "อีก " + r.days_until + " วัน"}</span>` },
+            { k: "status", label: "สถานะ" }
+          ] });
       },
       budget(d) {
         const rows = d.rows || [], st = d.by_status || [], bk = d.buckets || {}, tot = d.totals || {}, ot = d.open_totals || {};

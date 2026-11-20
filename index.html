@@ -2776,7 +2776,32 @@
         b.innerHTML = `<div class="group-title">งานหัวต่อวันนี้ แยกตามคน</div>` + (pp.length ? pp.map((p) => row(p.name, (p.jobs && p.jobs.length ? p.jobs.join(" · ") : (p.codes || []).join(", ")), "code", p.count + " งาน")).join("") : none("วันนี้ยังไม่มีงานหัวต่อ"));
       },
       ofc(b, d) {
-        b.innerHTML = `<div class="group-title">งานที่เลยกำหนดตัด</div>` + ((d.rows || []).map((r) => row([r.eas, r.ugrl, r.province].filter(Boolean).join(" · "), (r.project || "") + (r.cut_date ? " · กำหนดตัด " + r.cut_date : ""), "code", "เลย " + r.days_over + " วัน", "alert")).join("") || none("ไม่มีงานเลยกำหนดตัด"));
+        const rows = d.rows || [], due7 = d.due7_rows || [];
+        const cur = (state.panelBucket && state.panelBucket.id === "ofc" && state.panelBucket.key) || "all";
+        const show = (k) => cur === "all" || cur === k;
+        const tabs = [
+          { id: "all", label: "ทั้งหมด", n: rows.length + due7.length, tone: "" },
+          { id: "overdue", label: "เลยกำหนด", n: rows.length, tone: rows.length ? "alert" : "" },
+          { id: "due7", label: "0–7 วัน", n: due7.length, tone: due7.length ? "watch" : "" }
+        ];
+        const rRow = (r, chip, tone) => row([r.eas, r.ugrl, r.province].filter(Boolean).join(" · "), (r.project || "") + (r.cut_date ? " · กำหนดตัด " + r.cut_date : "") + (r.status ? " · " + r.status : ""), "code", chip, tone);
+        b.innerHTML = `<div class="buck-tabs" role="tablist" aria-label="กรองงาน True RAUG OFC">` +
+          tabs.map((t) => `<button type="button" class="${cur === t.id ? "on " + t.tone : t.tone}" data-buck="${t.id}" role="tab" aria-selected="${cur === t.id}">${esc(t.label)} (${t.n})</button>`).join("") + `</div>` +
+          `<div class="buck-sec" data-bucket="overdue" ${show("overdue") ? "" : "hidden"}><div class="group-title">งานที่เลยกำหนดตัด (${rows.length})</div>` +
+          (rows.map((r) => rRow(r, "เลย " + r.days_over + " วัน", "alert")).join("") || none("ไม่มีงานเลยกำหนดตัด")) + `</div>` +
+          `<div class="buck-sec" data-bucket="due7" ${show("due7") ? "" : "hidden"}><div class="group-title">ครบกำหนดตัดใน 0–7 วัน (${due7.length})</div>` +
+          (due7.map((r) => rRow(r, r.days_until === 0 ? "วันนี้" : "อีก " + r.days_until + " วัน", "watch")).join("") || none("ไม่มีงานในช่วง 0–7 วัน")) + `</div>`;
+        b.querySelectorAll("[data-buck]").forEach((btn) => btn.addEventListener("click", () => {
+          state.panelBucket = { id: "ofc", key: btn.dataset.buck };
+          const k = btn.dataset.buck;
+          b.querySelectorAll("[data-buck]").forEach((x) => {
+            const t = tabs.find((z) => z.id === x.dataset.buck) || { tone: "" };
+            const on = x.dataset.buck === k;
+            x.className = on ? ("on " + t.tone).trim() : t.tone;
+            x.setAttribute("aria-selected", on ? "true" : "false");
+          });
+          b.querySelectorAll(".buck-sec").forEach((s) => { s.hidden = !(k === "all" || s.dataset.bucket === k); });
+        }));
       },
       budget(b, d) {
         const st = (d.by_status || []).filter((s) => s.open), bk = d.buckets || {}, tot = d.totals || {}, ot = d.open_totals || {};
