@@ -3916,8 +3916,10 @@
     function load() {
       return API.data(false).then(applyData).catch((e) => { applyData({ planets: {}, updated_label: "ดึงข้อมูลไม่สำเร็จ", message: String(e && e.message || e) }); });
     }
+    // วาดดวงอาทิตย์และดาวทั้ง 15 ดวงทันทีระหว่างรอข้อมูลจากเซิร์ฟเวอร์ (ไม่ค้างหน้าว่างมุมซ้ายบน)
+    applyData({ planets: {}, updated_label: "กำลังโหลด…", message: "กำลังโหลดข้อมูลจากชีต…" });
+    raf = requestAnimationFrame(tick);
     load().then(() => {
-      raf = requestAnimationFrame(tick);
       if (params.get("add") != null) { const c = ((state.data && state.data.custom) || [])[0]; openAdd(params.get("add") === "edit" || params.get("add") === "test" ? c : undefined); if (params.get("add") === "test") $("addTest").click(); }
       if (params.get("refresh")) refreshPlanet(params.get("refresh"));
     });
