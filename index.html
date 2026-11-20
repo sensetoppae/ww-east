@@ -2187,7 +2187,23 @@
         hint: "เขียนแถวใหม่ต่อจากงานล่าสุดในแท็บ “Block FTTx” เฉพาะคอลัมน์ A–F (เฉพาะเจ้าของสคริปต์)",
         fields: [{ k: "name", label: "Name (มีรหัส UGRL)", req: true, max: 300, ph: "เช่น UGRL08405 ชื่องาน" }, { k: "req", label: "Request No", max: 60, half: true },
           { k: "target", type: "date", label: "Target Date", half: true }, { k: "status", type: "select", label: "สถานะ", half: true },
-          { k: "data", type: "date", label: "Data", def: "today", half: true }, { k: "closeNo", label: "Request No ปิดงาน", max: 60 }] }
+          { k: "data", type: "date", label: "Data", def: "today", half: true }, { k: "closeNo", label: "Request No ปิดงาน", max: 60 }] },
+      planwork: { btn: "➕ เพิ่มข้อมูล", fn: "addPlanworkRow", url: "/api/planwork/add", ok: "✅ เพิ่มข้อมูล Planwork แล้ว", titleKey: "project",
+        hint: "เขียนต่อท้าย 1 แถวในแท็บ “schedule” เฉพาะคอลัมน์ A–N (ไม่แตะตารางสูตร O–W)",
+        fields: [
+          { k: "date", type: "date", label: "A วันที่", def: "today", half: true },
+          { k: "owner", label: "B NOP Owner", max: 100, ph: "เช่น Wirote", half: true },
+          { k: "province", label: "C Province", max: 60, ph: "เช่น ชลบุรี / CBR", half: true },
+          { k: "project", label: "D Project Name", req: true, max: 300, ph: "ชื่อโครงการ", half: true },
+          { k: "no", label: "F No", max: 60, ph: "รหัส No", half: true },
+          { k: "pw", label: "E PW", max: 60, ph: "รหัส PW (ถ้ามี)", half: true },
+          { k: "sub", label: "H Sub", max: 100, ph: "Sub", half: true },
+          { k: "corp", label: "I Corp", max: 100, ph: "Corp", half: true },
+          { k: "mobile", label: "J Mobile", max: 100, ph: "Mobile", half: true },
+          { k: "site", label: "L site", max: 120, ph: "ชื่อ site", half: true },
+          { k: "vender", label: "M vender", max: 120, ph: "ผู้รับเหมา", half: true },
+          { k: "contact", label: "N ติดต่อ", max: 200, ph: "เบอร์ / ข้อมูลติดต่อ", half: true }
+        ] }
     };
     function makeAddForms(o) {
       const st = { open: null, vals: {}, err: "", saving: false, saved: null, meta: {}, who: null };
@@ -2279,6 +2295,12 @@
       if (id === "notes") { pl.notes = [{ row_num: row, date: ymdDisp(v.date), ymd: v.date, title: v.title, detail: v.detail, who: v.who, chat: "Dashboard" }].concat(pl.notes || []); pl.count = pl.notes.length; pl.missing = false; pl.message = ""; if (pl.metrics && pl.metrics[0]) pl.metrics[0].value = String(pl.count); }
       if (id === "meetings") { pl.upcoming = (pl.upcoming || []).concat([{ row_num: row, date: ymdDisp(v.date), ymd: v.date, time: v.time ? v.time.replace(/^0/, "") + " น." : "", title: v.title, place: [v.place, v.province].filter(Boolean).join(" "), days: 0, countdown: "ใหม่", tone: "ok" }]).sort((a, b) => (a.ymd < b.ymd ? -1 : a.ymd > b.ymd ? 1 : 0)); pl.count = pl.upcoming.length; pl.count_label = "นัดถัดไป " + pl.count; }
       if (id === "fttx") { pl.open_total = (pl.open_total || 0) + 1; (pl.metrics || []).forEach((m) => { if (m.label === "เปิดอยู่") m.value = String(pl.open_total); }); }
+      if (id === "planwork") {
+        const item = { row_num: row, date: ymdDisp(v.date), ymd: v.date, owner: v.owner || "", province: v.province || "", project: v.project || "", pw: v.pw || "", no: v.no || "", site: v.site || "", vender: v.vender || "", when: "วันนี้" };
+        pl.today_rows = [item].concat(pl.today_rows || []);
+        pl.count = (pl.today_rows ? pl.today_rows.length : 0) + (pl.tomorrow_rows ? pl.tomorrow_rows.length : 0);
+        pl.count_label = "วันนี้ " + (pl.today_rows ? pl.today_rows.length : 0) + " · พรุ่งนี้ " + (pl.tomorrow_rows ? pl.tomorrow_rows.length : 0);
+      }
       const hm = new Date(); pl.updated_hm = String(hm.getHours()).padStart(2, "0") + ":" + String(hm.getMinutes()).padStart(2, "0");
       return { ok: true, row: row, url: (d.sheet_url || "").split("#")[0] + "#gid=0&range=A" + row, planet: pl };
     }
@@ -2755,10 +2777,11 @@
       },
       planwork(b, d) {
         const f = (r, chip, tone) => row([r.pw, r.ugrl, r.province].filter(Boolean).join(" · "), (r.project || "") + (r.date ? " · กำหนด " + r.date : ""), "code", chip, tone);
-        b.innerHTML = `<div class="group-title">ครบกำหนดวันนี้</div>${(d.today_rows || []).map((r) => f(r, "วันนี้", "alert")).join("") || none("ไม่มีงานครบวันนี้")}
+        b.innerHTML = AF.html("planwork") + `<div class="group-title">ครบกำหนดวันนี้</div>${(d.today_rows || []).map((r) => f(r, "วันนี้", "alert")).join("") || none("ไม่มีงานครบวันนี้")}
           <div class="group-title">ครบกำหนดพรุ่งนี้</div>${(d.tomorrow_rows || []).map((r) => f(r, "พรุ่งนี้", "alert")).join("") || none("ไม่มีงานครบพรุ่งนี้")}
           <div class="group-title">งานถัดไป</div>${(d.upcoming || []).slice(0, 8).map((r) => f(r, r.date || "ถัดไป", "watch")).join("") || none("ไม่มีงานถัดไป")}` +
           ((d.past_recent || []).length ? `<div class="group-title">ที่ผ่านมาแล้ว (14 วัน · ${d.past_total || 0} ทั้งแท็บ)</div>` + d.past_recent.slice(0, 6).map((r) => f(r, "ผ่านแล้ว", "")).join("") : "");
+        AF.bind(b, "planwork");
       },
       fttx(b, d) {
         const f = (r, chip, tone) => row([r.req, r.ugrl].filter(Boolean).join(" · "), (r.name || "") + (r.target ? " · กำหนด " + r.target : ""), "code", chip, tone);
