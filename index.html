@@ -312,6 +312,19 @@
     .metric.alert b { color: #ff8090; } .metric.watch b { color: #ffd27a; } .metric.ok b { color: #7ff0c4; }
     .panel-body { position: relative; flex: 1; overflow: auto; padding: 0 18px 12px; scrollbar-width: thin; scrollbar-color: rgba(160,150,255,.3) transparent; }
     .group-title { font-size: 12px; font-weight: 500; color: #a8a0ff; letter-spacing: .4px; margin: 14px 0 6px; }
+    .ci-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0 10px; }
+    .ci-bar span { font-size: 12.5px; color: var(--mute); white-space: nowrap; }
+    .ci-sel { flex: 1; height: 34px; border-radius: 10px; border: 1px solid rgba(170,160,255,.28); background: rgba(12,10,36,.72); color: #f3f1ff; padding: 0 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+    .ci-kpi { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(62,230,168,.1); border: 1px solid rgba(62,230,168,.28); margin-bottom: 10px; }
+    .ci-kpi b { font-size: 18px; color: #7dffc9; }
+    .ci-kpi span { font-size: 12px; color: #cfe9de; }
+    .ci-sec { margin: 12px 0 6px; font-size: 12.5px; font-weight: 700; color: #ffe39b; display: flex; align-items: center; justify-content: space-between; }
+    .ci-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .ci-tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 10px; background: rgba(255,255,255,.06); border: 1px solid rgba(170,160,255,.22); font-size: 12.5px; color: #f3f1ff; }
+    .ci-tag b { color: #7dffc9; font-weight: 700; }
+    .ci-rec { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(170,160,255,.14); margin-bottom: 6px; font-size: 12.5px; }
+    .ci-rec .tp { display: flex; justify-content: space-between; gap: 8px; font-weight: 700; color: #f3f1ff; }
+    .ci-rec .sb { font-size: 11.5px; color: var(--mute); margin-top: 2px; }
     .buck-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
     .buck-tabs button { border: 1px solid rgba(170,160,255,.28); background: rgba(12,10,36,.6); color: #d9d7f5; border-radius: 999px;
       padding: 5px 10px; font: inherit; font-size: 12px; cursor: pointer; }
@@ -2730,9 +2743,33 @@
     }
     const R = {
       checkin(b, d) {
-        b.innerHTML = `<div class="group-title">Vender สัปดาห์นี้</div>${(d.venders || []).map((v, i) => row(v.name, "", "", v.count + " งาน", i === 0 ? "ok" : "")).join("") || none("ยังไม่มีข้อมูล")}
-          <div class="group-title">ประเภท สัปดาห์นี้</div>${(d.types || []).map((v) => row(v.name, "", "", v.count + " งาน")).join("") || none("—")}
-          <div class="group-title">Check In วันนี้ (ล่าสุด)</div>${(d.recent || []).map((r) => row(r.sites, r.type || "", "code", r.vender || "")).join("") || none("วันนี้ยังไม่มี Check In")}`;
+        const days = d.days || [];
+        if (!days.length) {
+          b.innerHTML = `<div class="group-title">Vender สัปดาห์นี้</div>${(d.venders || []).map((v, i) => row(v.name, "", "", v.count + " งาน", i === 0 ? "ok" : "")).join("") || none("ยังไม่มีข้อมูล")}
+            <div class="group-title">ประเภท สัปดาห์นี้</div>${(d.types || []).map((v) => row(v.name, "", "", v.count + " งาน")).join("") || none("—")}
+            <div class="group-title">Check In วันนี้ (ล่าสุด)</div>${(d.recent || []).map((r) => row(r.sites, r.type || "", "code", r.vender || "")).join("") || none("วันนี้ยังไม่มี Check In")}`;
+          return;
+        }
+        const todayYmd = d.today_ymd || (days[0] && days[0].ymd) || "";
+        if (!state.ciDay) state.ciDay = todayYmd;
+        const cur = days.find((x) => x.ymd === state.ciDay) || days[0];
+        const dayOpts = days.map((x) => `<option value="${esc(x.ymd)}"${x.ymd === cur.ymd ? " selected" : ""}>${esc(x.date)}${x.ymd === todayYmd ? " (วันนี้)" : ""} · ${x.count} รายการ</option>`).join("");
+        const typeHtml = (cur.types && cur.types.length)
+          ? `<div class="ci-tags">${cur.types.map((t) => `<span class="ci-tag">${esc(t.name)} <b>${t.count}</b></span>`).join("")}</div>`
+          : none("ไม่มีข้อมูลประเภทในวันนี้");
+        const venHtml = (cur.venders && cur.venders.length)
+          ? `<div class="ci-tags">${cur.venders.map((v) => `<span class="ci-tag">${esc(v.name)} <b>${v.count}</b></span>`).join("")}</div>`
+          : none("ไม่มีข้อมูล Vender ในวันนี้");
+        const recHtml = (cur.recent && cur.recent.length)
+          ? cur.recent.map((r) => `<div class="ci-rec"><div class="tp"><span>${esc(r.vender || "ไม่ระบุ Vender")}</span><span style="color:#7dffc9">${esc(r.type)}</span></div><div class="sb">${esc(r.sites)}${r.name ? " · " + esc(r.name) : ""}</div></div>`).join("")
+          : none("ยังไม่มีรายการเช็กอินในวันนี้");
+        b.innerHTML = `<div class="ci-bar"><span>เลือกวันที่</span><select id="ciDaySel" class="ci-sel">${dayOpts}</select></div>` +
+          `<div class="ci-kpi"><b>${cur.count} รายการ</b><span>เช็กอินวันที่ ${esc(cur.date)}</span></div>` +
+          `<div class="ci-sec"><span>ประเภทงาน</span><span>${cur.types ? cur.types.length : 0} ประเภท</span></div>${typeHtml}` +
+          `<div class="ci-sec"><span>Vender ที่เช็กอิน</span><span>${cur.venders ? cur.venders.length : 0} เจ้า</span></div>${venHtml}` +
+          `<div class="ci-sec"><span>รายการล่าสุด</span><span>${cur.recent ? cur.recent.length : 0} รายการ</span></div>${recHtml}`;
+        const sel = $("ciDaySel");
+        if (sel) sel.addEventListener("change", (e) => { state.ciDay = e.target.value; renderers.checkin(b, d); });
       },
       huato(b, d) {
         const pp = d.people || [];
