@@ -938,6 +938,12 @@
     .vx-rec.over { background: rgba(255,84,104,.12); border-color: rgba(255,84,104,.55); }
     .vx-rec b { display: block; font-size: 12px; color: #ffe39b; margin-bottom: 4px; }
     .vx-rec div { font-size: 13px; line-height: 1.55; }
+    .vx-rm { padding: 8px 12px; border-radius: 12px; background: rgba(255,255,255,.05); margin: 0 0 10px; font-size: 13px; line-height: 1.55; color: #e4e1ff; }
+    .vx-rm span { display: block; font-size: 11px; color: #9f9dc6; margin-bottom: 2px; }
+    .vx-price { margin-top: 2px; }
+    .vx-money { font-variant-numeric: tabular-nums; }
+    .vx-ofc { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+    .vx-ofc i { font-style: normal; padding: 6px 8px; border-radius: 10px; background: rgba(62,230,168,.1); font-size: 12px; color: #d8ffe8; }
     .vx-ai { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(143,155,255,.12); border: 1px solid rgba(143,155,255,.35); font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
     .vx-ai.err { background: rgba(255,84,104,.1); border-color: rgba(255,84,104,.4); }
     .vx-act { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -2323,6 +2329,19 @@
       }
       function daysShort(j) { return j.b === "overdue" ? "เลย " + (j.od || 0) + " วัน" : (j.b === "closed" ? "ปิดแล้ว" : (j.b === "no_plan" ? "ไม่มีแผน" : (j.du === 0 ? "วันนี้" : "อีก " + (j.du || 0) + " วัน"))); }
       function daysCls(j) { return { overdue: "over", due7: "soon", later: "ok", no_plan: "np", closed: "cl" }[j.b] || "cl"; }
+      function baht(n) {
+        if (n == null || n === "") return "";
+        const x = Number(n);
+        if (!isFinite(x)) return "";
+        return x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " บาท";
+      }
+      function metres(n) {
+        const x = Number(n);
+        if (!isFinite(x) || x === 0) return "";
+        const t = Number.isInteger(x) ? x.toLocaleString("en-US") : x.toLocaleString("en-US", { maximumFractionDigits: 2 });
+        return t + " ม.";
+      }
+      function ofcText(j) { return (j.cb || []).map((c) => c[0] + ": " + metres(c[1])).filter(Boolean).join(" · "); }
       function recLines(d, j) {
         const st = statusOf(d, j.sc), out = [];
         if (j.b === "overdue") out.push("⚠️ เลยกำหนดมาแล้ว " + (j.od || 0) + " วัน ควรเร่งดำเนินการหรืออัปเดต Target Date");
@@ -2331,7 +2350,7 @@
         if (j.b === "no_plan") out.push("ยังไม่มี Target Date ควรกำหนดแผน");
         return out;
       }
-      function jobText(d, j) { return norm([j.u, j.p, j.pv, j.o, j.s, j.ss, j.no, j.t, vendorName(d, j.v), j.vr].join(" ")); }
+      function jobText(d, j) { return norm([j.u, j.p, j.pv, j.o, j.s, j.ss, j.no, j.t, vendorName(d, j.v), j.vr, j.rm, ofcText(j)].join(" ")); }
       function matches(d, j, q) {
         if (!q) return true;
         if (!j._q) Object.defineProperty(j, "_q", { value: jobText(d, j), enumerable: false });
@@ -2446,11 +2465,14 @@
         }
       }
       const JOB_COLS = [{ h: "Vender", w: 18 }, { h: "UGRL", w: 13 }, { h: "Project Name", w: 60 }, { h: "Province", w: 14 }, { h: "NOP Owner", w: 14 }, { h: "Distance (Km.)", w: 12 },
-        { h: "สถานะ", w: 18 }, { h: "Sub Status", w: 18 }, { h: "Target Date", w: 13 }, { h: "กลุ่มกำหนด", w: 13 }, { h: "เลย/อีก (วัน)", w: 15 }, { h: "คำแนะนำ", w: 50 }, { h: "Link Doc", w: 45 }];
+        { h: "สถานะ", w: 18 }, { h: "Sub Status", w: 18 }, { h: "Target Date", w: 13 }, { h: "กลุ่มกำหนด", w: 13 }, { h: "เลย/อีก (วัน)", w: 15 }, { h: "คำแนะนำ", w: 50 }, { h: "Link Doc", w: 45 },
+        { h: "Remark", w: 40 }, { h: "ราคา Service", w: 16 }, { h: "ราคา OFC", w: 16 }, { h: "ราคารวม", w: 16 }, { h: "สาย OFC ที่ใช้", w: 40 }];
+      function numCell(n) { return n == null || n === "" ? { v: "" } : { v: n, t: "n" }; }
       function jobRows(d, jobs) {
         return jobs.map((j) => ({ red: j.b === "overdue", cells: [
           { v: vendorName(d, j.v) + (j.vr ? " (" + j.vr + ")" : "") }, { v: j.u }, { v: j.p }, { v: j.pv }, { v: j.o }, { v: j.km || "", t: "n" },
-          { v: j.s }, { v: j.ss }, j.ty ? { v: j.ty, t: "d" } : { v: j.t }, { v: BUCKET_TH[j.b] || "" }, { v: daysShort(j) }, { v: recLines(d, j).join(" · ") }, { v: j.q || "" }] }));
+          { v: j.s }, { v: j.ss }, j.ty ? { v: j.ty, t: "d" } : { v: j.t }, { v: BUCKET_TH[j.b] || "" }, { v: daysShort(j) }, { v: recLines(d, j).join(" · ") }, { v: j.q || "" },
+          { v: j.rm || "" }, numCell(j.sv), numCell(j.oc), numCell(j.tt), { v: ofcText(j) }] }));
       }
       function safeName(s) { return String(s || "").replace(/[\\\/?*:\[\]"<>|]+/g, "_").replace(/\s+/g, "_").slice(0, 40) || "Vender"; }
 
@@ -2565,8 +2587,8 @@
             (chips.length ? '<div class="vx-chips">' + chips.join("") + '</div>' : '');
           if (mode === "list") h += '<div class="vx-list" id="vxList">' + (list.slice(0, 400).map((j) => liHtml(j, false)).join("") || '<div class="vx-empty">ไม่พบงาน</div>') + '</div>';
           else h += '<div class="vx-moons" id="vxMoons">' + (list.slice(0, 400).map((j) => { const s = statusOf(d, j.sc); return '<button type="button" class="vx-moon ' + daysCls(j) + '" data-dt="' + j.r + '" style="--sc:' + s.color + '" title="' + ESC((j.u || "") + " · " + (j.s || "") + " · Target " + (j.t || "-") + " · " + daysShort(j) + " — กดเพื่อดูรายละเอียด") + '" aria-label="รายละเอียด ' + ESC(j.u || "") + '"><span class="b"></span><span class="u">' + ESC(j.u || ("แถว " + j.r)) + '</span><span class="dd">' + ESC(j.b === "later" || j.b === "no_plan" ? (j.t || "") : daysShort(j)) + '</span></button>'; }).join("") || '<div class="vx-empty">ไม่พบงาน</div>') + '</div>';
-          h += '<div class="vx-h">ตารางงานทั้งหมดของ ' + ESC(v.name) + ' <small>' + list.length + ' งาน · ค้นหาด้วยช่องด้านบน</small></div><div class="vx-tw"><table class="vx-t" id="vxJobsT"><thead><tr><th>UGRL</th><th>โครงการ</th><th>จังหวัด</th><th>NOP</th><th>สถานะ</th><th class="n">Target</th><th>กำหนด</th><th></th></tr></thead><tbody>' +
-            (list.slice(0, 1000).map((j) => '<tr class="' + (j.b === "overdue" ? "over" : "") + '"><td>' + ESC(j.u) + '</td><td><span class="pj" title="' + ESC(j.p) + '">' + ESC(j.p) + '</span></td><td>' + ESC(j.pv) + '</td><td>' + ESC(j.o) + '</td><td>' + chipSt(j) + '</td><td class="n">' + ESC(j.t) + '</td><td>' + dChip(j) + '</td><td>' + detailBtn(j) + '</td></tr>').join("") || '<tr><td colspan="8" class="vx-empty">ไม่พบงาน</td></tr>') +
+          h += '<div class="vx-h">ตารางงานทั้งหมดของ ' + ESC(v.name) + ' <small>' + list.length + ' งาน · ค้นหาด้วยช่องด้านบน</small></div><div class="vx-tw"><table class="vx-t" id="vxJobsT"><thead><tr><th>UGRL</th><th>โครงการ</th><th>จังหวัด</th><th>NOP</th><th>สถานะ</th><th class="n">Target</th><th>กำหนด</th><th>Remark</th><th class="n">ราคารวม</th><th>สาย OFC</th><th></th></tr></thead><tbody>' +
+            (list.slice(0, 1000).map((j) => '<tr class="' + (j.b === "overdue" ? "over" : "") + '"><td>' + ESC(j.u) + '</td><td><span class="pj" title="' + ESC(j.p) + '">' + ESC(j.p) + '</span></td><td>' + ESC(j.pv) + '</td><td>' + ESC(j.o) + '</td><td>' + chipSt(j) + '</td><td class="n">' + ESC(j.t) + '</td><td>' + dChip(j) + '</td><td><span class="pj" title="' + ESC(j.rm || "") + '">' + ESC((j.rm || "").slice(0, 40)) + '</span></td><td class="n">' + ESC(j.tt != null ? baht(j.tt) : "") + '</td><td>' + ESC(ofcText(j)) + '</td><td>' + detailBtn(j) + '</td></tr>').join("") || '<tr><td colspan="11" class="vx-empty">ไม่พบงาน</td></tr>') +
             '</tbody></table></div>';
           return h;
         }
@@ -2578,6 +2600,12 @@
             '<div class="pj">' + ESC(j.p || "") + '</div>' +
             '<div class="vx-kv"><div><span>จังหวัด</span>' + ESC(j.pv || "-") + '</div><div><span>NOP Owner</span>' + ESC(j.o || "-") + '</div><div><span>ระยะทาง</span>' + (j.km ? ESC(j.km) + " กม." : "-") + '</div><div><span>Project Type</span>' + ESC(j.pt || "-") + '</div>' +
             '<div><span>Target Date (P)</span><b>' + ESC(j.t || "-") + '</b> · ' + ESC(daysText(j)) + '</div><div><span>No. / แถวในชีต</span>' + ESC(j.no || "-") + ' · แถว ' + j.r + '</div>' + (j.g ? '<div><span>Status WW</span>' + ESC(j.g) + '</div>' : '') + '</div>' +
+            (j.rm ? '<div class="vx-rm"><span>Remark</span>' + ESC(j.rm) + '</div>' : '') +
+            ((j.sv != null || j.oc != null || j.tt != null) ? ('<div class="vx-kv vx-price">' +
+              (j.sv != null ? '<div><span>ราคา Service</span><b class="vx-money">' + ESC(baht(j.sv)) + '</b></div>' : '') +
+              (j.oc != null ? '<div><span>ราคา OFC</span><b class="vx-money">' + ESC(baht(j.oc)) + '</b></div>' : '') +
+              (j.tt != null ? '<div><span>ราคารวม</span><b class="vx-money">' + ESC(baht(j.tt)) + '</b></div>' : '') + '</div>') : '') +
+            ((j.cb && j.cb.length) ? '<div class="vx-h">สาย OFC ที่ใช้</div><div class="vx-ofc">' + j.cb.map((c) => '<i>' + ESC(c[0]) + ': ' + ESC(metres(c[1])) + '</i>').join("") + '</div>' : '') +
             '<div class="vx-rec' + (j.b === "overdue" ? " over" : "") + '"><b>คำแนะนำ (ตามสถานะ)</b>' + rec.map((x) => '<div>' + ESC(x) + '</div>').join("") + '</div>' +
             (j.b === "closed" ? '' : '<div class="vx-h" style="margin-top:6px">วันสำคัญ (W–AD)</div><div class="vx-ms">' + MS_LABELS.map((L, i) => '<div class="' + (ms[i] ? "has" : "") + '"><span>' + L + '</span>' + ESC(ms[i] || "–") + '</div>').join("") + '</div>') +
             '<div class="vx-act">' + (j.q ? '<a class="vx-btn" href="' + ESC(j.q) + '" target="_blank" rel="noopener">📁 Link Doc</a>' : '') + (sheet ? '<a class="vx-btn" href="' + ESC(sheet) + '" target="_blank" rel="noopener">📄 เปิดแถวในชีต</a>' : '') +
@@ -2587,7 +2615,9 @@
           const ms = j.ms || [], parts = [];
           MS_LABELS.slice(0, 6).forEach((L, i) => { if (ms[i]) parts.push(L.split(" ")[0] + " " + ms[i]); });
           const q = "ช่วยแนะนำขั้นตอนถัดไปของงานนี้ สั้นๆ เป็นข้อๆ ภาษาไทย: Vender " + vendorName(d, j.v) + ", UGRL " + (j.u || "-") + ", โครงการ " + String(j.p || "").slice(0, 90) +
-            ", จังหวัด " + (j.pv || "-") + ", สถานะ " + (j.s || "-") + (j.ss ? " (" + j.ss + ")" : "") + ", Target " + (j.t || "-") + " (" + daysText(j) + ")" + (parts.length ? ", " + parts.join(", ") : "") + " — งานนี้ควรทำอะไรต่อ ติดต่อใคร";
+            ", จังหวัด " + (j.pv || "-") + ", สถานะ " + (j.s || "-") + (j.ss ? " (" + j.ss + ")" : "") + ", Target " + (j.t || "-") + " (" + daysText(j) + ")" +
+            (j.rm ? ", Remark " + String(j.rm).slice(0, 80) : "") + (j.tt != null ? ", ราคารวม " + baht(j.tt) : "") + (j.cb && j.cb.length ? ", " + ofcText(j) : "") +
+            (parts.length ? ", " + parts.join(", ") : "") + " — งานนี้ควรทำอะไรต่อ ติดต่อใคร";
           return q.slice(0, 495);
         }
         function openDetail(r) {
@@ -2666,7 +2696,7 @@
         if (st.detail != null && document.getElementById("vxDetail") && !document.getElementById("vxDetail").hidden) openDetail(st.detail);
         return { state: st, redraw: draw, openDetail, download, buildXlsx };
       }
-      return { mount, buildXlsx, statusMatrix, recLines, states: STATES };
+      return { mount, buildXlsx, statusMatrix, recLines, baht, metres, ofcText, states: STATES };
     })();
     window.VenderUI = VenderUI;
     /* VENDER_UI:END */
