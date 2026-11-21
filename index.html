@@ -325,6 +325,17 @@
     .ci-rec { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(170,160,255,.14); margin-bottom: 6px; font-size: 12.5px; }
     .ci-rec .tp { display: flex; justify-content: space-between; gap: 8px; font-weight: 700; color: #f3f1ff; }
     .ci-rec .sb { font-size: 11.5px; color: var(--mute); margin-top: 2px; }
+    .sf-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+    .sf-kpi { padding: 8px 4px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(170,160,255,.18); text-align: center; cursor: pointer; font: inherit; color: #f3f1ff; }
+    .sf-kpi b { display: block; font-size: 16px; color: #fff; }
+    .sf-kpi span { display: block; font-size: 11px; color: var(--mute); }
+    .sf-kpi.alert b { color: #ff8e9b; }
+    .sf-kpi.ok b { color: #7dffc9; }
+    .sf-kpi.on { outline: 2px solid var(--sf-c, #ffcf5c); }
+    .sf-row { padding: 8px 10px 8px 12px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(170,160,255,.14); border-left: 3px solid var(--sf-c, #ffcf5c); margin-bottom: 6px; font-size: 12.5px; }
+    .sf-row .tp { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .sf-row .pj { margin-top: 2px; color: #eceaff; }
+    .sf-row .sb { font-size: 11.5px; color: var(--mute); margin-top: 2px; }
     .buck-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
     .buck-tabs button { border: 1px solid rgba(170,160,255,.28); background: rgba(12,10,36,.6); color: #d9d7f5; border-radius: 999px;
       padding: 5px 10px; font: inherit; font-size: 12px; cursor: pointer; }
@@ -1345,6 +1356,7 @@
       { id: "planwork", title: "Planwork",           c: "#5ee1ff", group: "field" },
       { id: "fttx",     title: "Block FTTx",        c: "#ff6fd8", group: "field" },
       { id: "vender",   title: "Vender RAUG",       c: "#ff7a59", group: "field" },
+      { id: "safety",   title: "🦺 ลงทะเบียน Safety", c: "#ffcf5c", group: "field" },
       { id: "meetings", title: "นัดประชุมการไฟฟ้า",    c: "#4aa3ff", group: "meet" },
       { id: "notes",    title: "บันทึกประชุม",         c: "#c08cff", group: "meet", ring: true },
       { id: "links",    title: "แหล่งเก็บข้อมูล",       c: "#00f0ff", group: "data", ring: true },
@@ -1373,7 +1385,7 @@
     const mqCompact = window.matchMedia("(max-width: 860px)");
     state.compact = mqCompact.matches;
     state.view = (function () { const v = params.get("view"); if (v === "list" || v === "galaxy") return v; try { return localStorage.getItem("space_view") === "list" ? "list" : "galaxy"; } catch (e) { return "galaxy"; } })();
-    const SHORT = { checkin: "Check In", huato: "หัวต่อ", planwork: "Planwork", ofc: "OFC", budget: "Budget", fttx: "FTTx", pat: "Pat", quota: "Quota", progress: "Progress", eec: "EEC&NANO", vender: "Vender RAUG", meetings: "นัดประชุม", notes: "บันทึก", links: "แหล่งข้อมูล", contacts: "ติดต่อ" };
+    const SHORT = { checkin: "Check In", huato: "หัวต่อ", planwork: "Planwork", ofc: "OFC", budget: "Budget", fttx: "FTTx", pat: "Pat", quota: "Quota", progress: "Progress", eec: "EEC&NANO", vender: "Vender RAUG", safety: "Safety", meetings: "นัดประชุม", notes: "บันทึก", links: "แหล่งข้อมูล", contacts: "ติดต่อ" };
     const shortName = (p) => SHORT[p.id] || (p.title.length > 10 ? p.title.slice(0, 9) + "…" : p.title);
     let PLANETS = [];
     const pdata = (id) => (state.data && state.data.planets && state.data.planets[id]) || null;
@@ -2845,6 +2857,41 @@
           <div class="group-title">งานถัดไป</div>${(d.upcoming || []).slice(0, 8).map((r) => f(r, r.date || "ถัดไป", "watch")).join("") || none("ไม่มีงานถัดไป")}` +
           ((d.past_recent || []).length ? `<div class="group-title">ที่ผ่านมาแล้ว (14 วัน · ${d.past_total || 0} ทั้งแท็บ)</div>` + d.past_recent.slice(0, 6).map((r) => f(r, "ผ่านแล้ว", "")).join("") : "");
         AF.bind(b, "planwork");
+      },
+      safety(b, d) {
+        const td = d.today_rows || [], ym = d.yesterday_rows || [], rec = d.recent_rows || [], allR = d.all_rows || [];
+        const scope = (state.panelBucket && state.panelBucket.id === "safety" && state.panelBucket.key) || "all";
+        const sfRow = (r, chip, col, tone) => `<div class="sf-row" style="--sf-c:${col}">` +
+          `<div class="tp"><b>${esc([r.work, r.ugrl].filter(Boolean).join(" · ") || ("แถว " + (r.row_num || "-")))}</b><span class="chip ${tone || ""}">${esc(chip)}</span></div>` +
+          `<div class="pj">${esc(r.project || r.summary || "-")}</div>` +
+          `<div class="sb">${esc([r.vendor, r.province, r.status].filter(Boolean).join(" · ") || ("แถว " + (r.row_num || "-")))}</div></div>`;
+        let h = `<div class="sf-kpis">` +
+          `<button type="button" class="sf-kpi${td.length ? " alert" : ""}${scope === "today" ? " on" : ""}" style="--sf-c:#ff5468" data-sfscope="today"><b>${td.length}</b><span>วันนี้</span></button>` +
+          `<button type="button" class="sf-kpi ok${scope === "yest" ? " on" : ""}" style="--sf-c:#3ee6a8" data-sfscope="yest"><b>${ym.length}</b><span>เมื่อวาน</span></button>` +
+          `<button type="button" class="sf-kpi${scope === "recent" ? " on" : ""}" style="--sf-c:#ffcf5c" data-sfscope="recent"><b>${rec.length}</b><span>ใหม่สะสม</span></button>` +
+          `<button type="button" class="sf-kpi${scope === "sheet" ? " on" : ""}" style="--sf-c:#5ef2d6" data-sfscope="sheet"><b>${d.total || 0}</b><span>ในชีต</span></button>` +
+          `</div>`;
+        if (scope === "all" || scope === "today") {
+          h += `<div class="group-title">เพิ่มใหม่วันนี้ (${esc(d.today_ymd || "")}) · ${td.length} งาน</div>` +
+            (td.length ? td.map((r) => sfRow(r, "ใหม่วันนี้", "#ff5468", "alert")).join("") : none("ยังไม่มีงานเพิ่มใหม่วันนี้"));
+        }
+        if (scope === "all" || scope === "yest") {
+          h += `<div class="group-title">เพิ่มเมื่อวาน (${esc(d.yesterday_ymd || "")}) · ${ym.length} งาน</div>` +
+            (ym.length ? ym.map((r) => sfRow(r, "เมื่อวาน", "#3ee6a8", "ok")).join("") : none("ไม่มีงานเพิ่มเมื่อวาน"));
+        }
+        if (scope === "recent") {
+          h += `<div class="group-title">งานเพิ่มใหม่ล่าสุด (${rec.length} รายการ)</div>` +
+            (rec.length ? rec.slice(0, 80).map((r) => sfRow(r, r.first_seen || "ใหม่", "#ffcf5c", "watch")).join("") : none("ยังไม่มีรายการใหม่"));
+        }
+        if (scope === "sheet") {
+          h += `<div class="group-title">รายการทั้งหมดในชีต (ใหม่ → เก่า · ${allR.length} / ${d.total || 0} แถว)</div>` +
+            (allR.length ? allR.map((r) => sfRow(r, "แถว " + (r.row_num || "-"), "#5ef2d6", "")).join("") : none("ไม่พบข้อมูลในชีต"));
+        }
+        b.innerHTML = h;
+        b.querySelectorAll("[data-sfscope]").forEach((el) => el.addEventListener("click", () => {
+          state.panelBucket = { id: "safety", key: (scope === el.dataset.sfscope ? "all" : el.dataset.sfscope) };
+          renderers.safety(b, d);
+        }));
       },
       fttx(b, d) {
         const f = (r, chip, tone) => row([r.req, r.ugrl].filter(Boolean).join(" · "), (r.name || "") + (r.target ? " · กำหนด " + r.target : ""), "code", chip, tone);

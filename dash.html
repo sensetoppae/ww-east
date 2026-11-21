@@ -483,7 +483,7 @@
     const JOB = ENV.job || params.get("job") || params.get("dash") || decodeURIComponent(location.pathname.replace(/^.*\/dash\/?/, "").replace(/\/$/, "")) || "checkin";
     const META = {
       checkin: ["Check In", "#34e0b4"], huato: ["บอทหัวต่อ", "#ff9b54"], ofc: ["True RAUG OFC", "#ff6b7a"], budget: ["Budget PE ค้างกำหนด", "#ffc94d"],
-      fttx: ["Block FTTx", "#ff6fd8"], planwork: ["Planwork", "#5ee1ff"], pat: ["รอเล่ม Pat", "#8f7bff"], quota: ["Quota OFC 2026", "#ff8a3d"], progress: ["Progress RAUG 2026", "#7dff8a"], eec: ["Improvement EEC&NANO 2026", "#46d6ff"], vender: ["Vender RAUG", "#ff7a59"], meetings: ["นัดประชุมการไฟฟ้า", "#4aa3ff"], notes: ["บันทึกประชุม", "#c08cff"], links: ["แหล่งเก็บข้อมูล", "#00f0ff"], contacts: ["ข้อมูลติดต่อ", "#ff9bd2"]
+      fttx: ["Block FTTx", "#ff6fd8"], planwork: ["Planwork", "#5ee1ff"], safety: ["🦺 ลงทะเบียน Safety", "#ffcf5c"], pat: ["รอเล่ม Pat", "#8f7bff"], quota: ["Quota OFC 2026", "#ff8a3d"], progress: ["Progress RAUG 2026", "#7dff8a"], eec: ["Improvement EEC&NANO 2026", "#46d6ff"], vender: ["Vender RAUG", "#ff7a59"], meetings: ["นัดประชุมการไฟฟ้า", "#4aa3ff"], notes: ["บันทึกประชุม", "#c08cff"], links: ["แหล่งเก็บข้อมูล", "#00f0ff"], contacts: ["ข้อมูลติดต่อ", "#ff9bd2"]
     };
     const PAL = ["#7ad7ff", "#ffcf5c", "#3ee6a8", "#ff6fd8", "#8f9bff", "#ff9b54", "#ff6b7a", "#c08cff", "#9dff6a", "#4aa3ff"];
     let DATA = null;
@@ -1176,6 +1176,21 @@
             { k: "state", label: "กลุ่ม", render: (r) => `<span class="chip ${r.state === "วันนี้" || r.state === "พรุ่งนี้" ? "alert" : (r.state === "งานถัดไป" ? "watch" : "")}">${esc(r.state)}</span>` },
             { k: "pw", label: "PW" }, { k: "project", label: "ชื่องาน" }, { k: "province", label: "จังหวัด" },
             { k: "owner", label: "ผู้รับผิดชอบ" }, { k: "vender", label: "Vender" }, { k: "ugrl", label: "UGRL" }
+          ] });
+      },
+      safety(d) {
+        const td = (d.today_rows || []).map((r) => Object.assign({ grp: "ใหม่วันนี้" }, r));
+        const ym = (d.yesterday_rows || []).map((r) => Object.assign({ grp: "เมื่อวาน" }, r));
+        const all = (d.all_rows || []).map((r) => Object.assign({ grp: "ในชีต" }, r));
+        kpis((d.metrics || []).map((m) => ({ label: m.label, value: m.value, tone: m.tone })).concat([{ label: "ใหม่สะสม", value: (d.recent_rows || []).length }]));
+        charts(card("แยกตามผู้รับเหมา", "ในชีต Safety", hbar(countBy(all, "vendor").map((x) => ({ label: x.label, value: x.value })), { max: 8 })) +
+          card("แยกตามจังหวัด", "", donut(countBy(all, "province").map((x) => ({ label: x.label, value: x.value })), { unit: "งาน" })));
+        const rows = td.concat(ym, all);
+        table({ title: "รายการลงทะเบียน Safety (UPC5_Partner Progress)", rows, filters: [{ k: "grp", label: "กลุ่ม" }, { k: "province", label: "จังหวัด" }, { k: "vendor", label: "Vender" }],
+          cols: [
+            { k: "grp", label: "กลุ่ม", render: (r) => `<span class="chip ${r.grp === "ใหม่วันนี้" ? "alert" : (r.grp === "เมื่อวาน" ? "ok" : "")}">${esc(r.grp)}</span>` },
+            { k: "work", label: "Work" }, { k: "ugrl", label: "UGRL" }, { k: "project", label: "โครงการ" },
+            { k: "vendor", label: "Vender" }, { k: "province", label: "จังหวัด" }, { k: "status", label: "สถานะ" }
           ] });
       },
       fttx(d) {
