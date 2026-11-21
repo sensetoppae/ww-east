@@ -2781,7 +2781,7 @@
           `<div class="ci-sec"><span>Vender ที่เช็กอิน</span><span>${cur.venders ? cur.venders.length : 0} เจ้า</span></div>${venHtml}` +
           `<div class="ci-sec"><span>รายการล่าสุด</span><span>${cur.recent ? cur.recent.length : 0} รายการ</span></div>${recHtml}`;
         const sel = $("ciDaySel");
-        if (sel) sel.addEventListener("change", (e) => { state.ciDay = e.target.value; renderers.checkin(b, d); });
+        if (sel) sel.addEventListener("change", (e) => { state.ciDay = e.target.value; R.checkin(b, d); });
       },
       huato(b, d) {
         const pp = d.people || [];
@@ -2890,7 +2890,7 @@
         b.innerHTML = h;
         b.querySelectorAll("[data-sfscope]").forEach((el) => el.addEventListener("click", () => {
           state.panelBucket = { id: "safety", key: (scope === el.dataset.sfscope ? "all" : el.dataset.sfscope) };
-          renderers.safety(b, d);
+          R.safety(b, d);
         }));
       },
       fttx(b, d) {
@@ -3470,7 +3470,10 @@
       $("panelSub").textContent = panelSub(d);
       const rb = $("panelRefresh"); rb.classList.toggle("spin", state.refreshing.has(id)); rb.disabled = state.refreshing.has(id);
       rb.hidden = false;
-      $("panelMetrics").innerHTML = (d.metrics || []).map((m) => `<div class="metric ${esc(m.tone || "")}"><b title="${esc(m.value)}">${esc(m.value)}</b><span>${esc(m.label)}</span></div>`).join("");
+      const pm = $("panelMetrics");
+      pm.hidden = (id === "safety");
+      pm.style.display = (id === "safety") ? "none" : "";
+      pm.innerHTML = (id === "safety" ? [] : (d.metrics || [])).map((m) => `<div class="metric ${esc(m.tone || "")}"><b title="${esc(m.value)}">${esc(m.value)}</b><span>${esc(m.label)}</span></div>`).join("");
       const body = $("panelBody");
       const keepScroll = opts.silent ? body.scrollTop : 0;
       if (opts.bucket) state.panelBucket = { id, key: opts.bucket };
@@ -3494,8 +3497,9 @@
       const extra = id === "checkin" || id === "budget" || id === "ofc";
       const foot = document.querySelector(".panel-foot");
       foot.classList.toggle("has-map", extra);
-      foot.style.gridTemplateColumns = extra ? "" : (d.sheet_url ? "" : "1fr");
       const dh = dashHref(id), db = $("openDash");
+      db.hidden = (id === "safety");
+      foot.style.gridTemplateColumns = extra ? "" : ((d.sheet_url && !db.hidden) ? "" : "1fr");
       db.href = dh.href; db.target = dh.target;
       if (dh.target === "_blank") db.rel = "noopener"; else db.removeAttribute("rel");
       PLANETS.forEach((x) => { x.el.classList.toggle("active", x.id === id); x.card.classList.toggle("active", x.id === id); });
