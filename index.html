@@ -1390,6 +1390,8 @@
     let PLANETS = [];
     const pdata = (id) => (state.data && state.data.planets && state.data.planets[id]) || null;
     const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+    const TH_MON = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    const nowDateTimeTH = () => { const d = new Date(); return d.getDate() + " " + TH_MON[d.getMonth()] + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + " น."; };
 
     /* ---------- Data source: local Python server, embedded preview, or Apps Script ---------- */
     function gas(fn, ...args) {
@@ -2130,8 +2132,9 @@
       state.data = data || { planets: {} };
       buildPlanets();
       $("exampleBadge").hidden = !state.data.example;
-      $("subline").textContent = state.data.example ? (state.data.message || "ข้อมูลตัวอย่าง") : (state.data.message || "ศูนย์รวมสถานะงานทุกระบบ · อ่านจากชีตอย่างเดียว · รีเฟรชอัตโนมัติทุก 4 ชั่วโมง");
       const upd = String(state.data.updated_label || "").replace("\n", " ");
+      const reloadTxt = state.lastReloadAt ? (" · รีโหลดล่าสุด " + state.lastReloadAt) : (upd && upd !== "กำลังโหลด…" && upd !== "ดึงข้อมูลไม่สำเร็จ" ? (" · รีโหลดล่าสุด " + upd.replace(/^อัปเดต\s+/, "")) : "");
+      $("subline").textContent = state.data.example ? (state.data.message || "ข้อมูลตัวอย่าง") : ((state.data.message || "ศูนย์รวมสถานะงานทุกระบบ · อ่านจากชีตอย่างเดียว · รีเฟรชอัตโนมัติทุก 4 ชั่วโมง") + reloadTxt);
       $("sunTime").textContent = String(state.data.updated_label || "—").replace("อัปเดต ", "");
       $("mSunTime").textContent = upd || "—"; $("updLabel").textContent = upd;
       let over = 0;
@@ -3527,6 +3530,10 @@
         if (!j || j.ok === false) throw new Error((j && j.error) || "ผิดพลาด");
         state.data.planets[id] = j.planet;
         state.refreshing.delete(id);
+        if (!opt.batch) {
+          state.lastReloadAt = nowDateTimeTH();
+          state.data.updated_label = "อัปเดต " + state.lastReloadAt;
+        }
         applyData(state.data);
         if (!opt.batch) showToast(`✅ รีเฟรช ${p.title} เสร็จแล้ว · ${j.planet.updated_hm || nowHM()}`);
         return true;
@@ -3733,6 +3740,11 @@
       await Promise.all(Array.from({ length: Math.min(4, ids.length) }, worker));
       refreshingAll = false; b.classList.remove("spin"); b.disabled = false;
       const n = ids.length, okN = n - failed.length;
+      if (okN > 0) {
+        state.lastReloadAt = nowDateTimeTH();
+        state.data.updated_label = "อัปเดต " + state.lastReloadAt;
+        applyData(state.data);
+      }
       if (!failed.length) showToast(`✅ รีเฟรชครบ ${n} ดวง · ${nowHM()}`);
       else showToast(`⚠️ สำเร็จ ${okN}/${n} ดวง · ไม่สำเร็จ: ${failed.map((id) => (PLANETS.find((p) => p.id === id) || {}).title || id).join(", ")}`, true);
     }
@@ -4027,7 +4039,7 @@
     document.addEventListener("visibilitychange", () => stars.setRunning(!document.hidden && !state.frozen && !state.reduced));
 
     function load() {
-      return API.data(false).then(applyData).catch((e) => { applyData({ planets: {}, updated_label: "ดึงข้อมูลไม่สำเร็จ", message: String(e && e.message || e) }); });
+      return API.data(false).then((d) => { state.lastReloadAt = nowDateTimeTH(); applyData(d); }).catch((e) => { applyData({ planets: {}, updated_label: "ดึงข้อมูลไม่สำเร็จ", message: String(e && e.message || e) }); });
     }
     // วาดดวงอาทิตย์และดาวทั้ง 15 ดวงทันทีระหว่างรอข้อมูลจากเซิร์ฟเวอร์ (ไม่ค้างหน้าว่างมุมซ้ายบน)
     applyData({ planets: {}, updated_label: "กำลังโหลด…", message: "กำลังโหลดข้อมูลจากชีต…" });
